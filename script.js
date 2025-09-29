@@ -11,14 +11,17 @@ window.addEventListener('resize', function( ) {
 })
 
 let pontos = [];
+let mediatriz = [];
 
 canvas.addEventListener('click', function(event) {
     
     const pontoClicado = { x: event.clientX, y: event.clientY };
-    let ponto;
-    ponto.x = x;
-    ponto.y = y;
-    pontos.push( ponto );
+
+    pontos.push( { x : pontoClicado.x, y : pontoClicado.y } );
+
+    if( pontos.length >= 2 ){
+        mediatriz.push( CalcularMediatriz( pontos[ pontos.length-2 ], pontos[ pontos.length -1 ] ) ); // y = mx + b
+    }
 
 });
 
@@ -76,8 +79,27 @@ Responsável por desenha os pontos e o diagrama de voronoi
 
 function Draw() {
 
-   
+
+    if ( pontos.length > 0 ) {
+
+        mediatriz.forEach( mediatriz => {
+
+            desenharMediatriz( ctx, canvas, mediatriz );
+
+        });
+
+        // desenha os pontos (vértices) da forma em construção
+        pontos.forEach( pontos => {
+
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.arc(pontos.x, pontos.y, 5, 0, Math.PI * 2);
+            ctx.fill();
+
+        });
+    }
 }
+
 
 /*
 ==========================================================
@@ -102,7 +124,7 @@ function Animate(){
 Animate();
 
 // calcula a reta mediatriz entre dois pontos
-function CalcularMediatriz( pontoA, pontoB ){
+function CalcularMediatriz( pontoA, pontoB ){ // y = mx + b
 
     let mediatriz = {};
     let coefAngularAB;
@@ -113,7 +135,7 @@ function CalcularMediatriz( pontoA, pontoB ){
         y : ( ( pontoA.y + pontoB.y ) / 2 )
     }; 
 
-if( pontoA.x == pontoB.x ){ // caso em que a reta é vertical "divisao por zero"
+    if( pontoA.x == pontoB.x ){ // caso em que a reta é vertical "divisao por zero"
 
         mediatriz = {  
             m : 0,  // m -> coefAngularAB, b -> pontoMedio.y
@@ -143,3 +165,52 @@ if( pontoA.x == pontoB.x ){ // caso em que a reta é vertical "divisao por zero"
 
 }
 
+
+function desenharMediatriz( ctx, canvas, mediatriz ){
+
+    ctx.beginPath();
+    ctx.strokeStyle = 'red'; 
+    ctx.lineWidth = 1;
+
+    if( mediatriz.isVertical === true ) {  // reta é vertical
+
+        ctx.moveTo(mediatriz.xIntercept, 0);
+        ctx.lineTo(mediatriz.xIntercept, canvas.height);
+
+    } else if (mediatriz.m === 0) { // reta é horizontal
+        // y = mx + b
+        // A coordenada Y é constante (igual a 'b'). A linha vai da esquerda à direita.
+        ctx.moveTo(0, mediatriz.b);
+        ctx.lineTo(canvas.width, mediatriz.b);
+        
+    } else { // reta é inclinada
+        // y = mx + b
+
+        // Ponto de partida: vamos começar da borda esquerda (x=0)
+        let yNaBordaAEsquerda = mediatriz.yIntercept; // Quando x=0, y=b
+
+        // Ponto de chegada: vamos terminar na borda direita (x=canvas.width)
+        let yNaBordaADireita = mediatriz.m * canvas.width + mediatriz.yIntercept;
+
+        ctx.moveTo(0, yNaBordaAEsquerda);
+        ctx.lineTo(canvas.width, yNaBordaADireita );
+    }
+
+    ctx.stroke(); // Efetivamente desenha a linha
+
+}
+
+function gerarCorAleatoria() {
+
+  const letras = '0123456789ABCDEF';
+  let cor = '#';
+
+  for ( let i = 0; i < 6; i++ ) {
+
+    cor += letras[ Math.floor( Math.random() * 16 ) ];
+
+  }
+
+  return cor;
+
+}
