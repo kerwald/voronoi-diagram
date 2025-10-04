@@ -11,13 +11,38 @@ window.addEventListener('resize', function( ) {
 })
 
 let pontos = [];
-let poligono = [];
+let poligonos = [];
+let cores = [];
 
 canvas.addEventListener('click', function(event) {
     
     const pontoClicado = { x: event.clientX, y: event.clientY };
 
     pontos.push( { x : pontoClicado.x, y : pontoClicado.y } );
+
+    // Define uma caixa delimitadora muito maior que o canvas para garantir que os polígonos sejam fechados.
+    const bounds = [-canvas.width, -canvas.height, canvas.width * 2, canvas.height * 2];
+
+    for( let i=0; i<pontos.length; i++ ){
+
+        let unidadePoligono = [ 
+        { x: bounds[0], y: bounds[1] },
+        { x: bounds[2], y: bounds[1] },
+        { x: bounds[2], y: bounds[3] },
+        { x: bounds[0], y: bounds[3] }
+        ];
+
+        for( let j=0; j<pontos.length; j++ ){
+
+            if( i == j ){
+                continue;
+            }
+
+            unidadePoligono = calcularPoligono( unidadePoligono, pontos[i], pontos[j] );
+            poligonos[i] = unidadePoligono;
+
+        }
+    }
 
 
 });
@@ -78,39 +103,44 @@ function Draw() {
 
 
     if ( pontos.length > 0 ) {
-        // desenha os pontos (vértices) da forma em construção
-        pontos.forEach( pontos => {
 
-            ctx.fillStyle = '#FFFFFF';
+        for( let i=0; i < poligonos.length; i++ ){
+
+            if( poligonos[i].length < 3 ){
+                continue;
+            }
+
             ctx.beginPath();
-            ctx.arc(pontos.x, pontos.y, 5, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.moveTo( poligonos[i][0].x, poligonos[i][0].y );
+            for( let j=0; j<poligonos[i].length; j++ ){
 
-        });
-
-        // Define uma caixa delimitadora muito maior que o canvas para garantir que os polígonos sejam fechados.
-        const bounds = [-canvas.width, -canvas.height, canvas.width * 2, canvas.height * 2];
-
-        for( let i=0; i<pontos.length; i++ ){
-            for( let j=0; j<pontos.length; j++ ){
-
-                if( i == j ){
-                    continue;
-                }
-
-                let unidadePoligono = [ 
-                    { x: bounds[0], y: bounds[1] },
-                    { x: bounds[2], y: bounds[1] },
-                    { x: bounds[2], y: bounds[3] },
-                    { x: bounds[0], y: bounds[3] }
-                ];
-
-                poligonos[i] = calcularPoligono( unidadePoligono, i, j );
+                ctx.lineTo( poligonos[i][j].x, poligonos[i][j].y );
 
             }
+
+            ctx.closePath();
+            ctx.fillStyle = cores[i];
+            ctx.fill();
+
+            // Desenha as bordas da célula
+            ctx.strokeStyle = '#374151'; // cinza escuro
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
         }
 
+        // desenha os pontos (vértices) da forma em construção
+        pontos.forEach( p => {
+            ctx.fillStyle = '#ff7700ff';
+            ctx.beginPath();
+            ctx.arc( p.x, p.y, 5, 0, Math.PI * 2);
+            ctx.fill();
+            // Desenha as bordas da célula
+            ctx.strokeStyle = '#ffffffff'; 
+            ctx.lineWidth = 2;
+            ctx.stroke();
 
+        });
 
     }
 }
@@ -185,4 +215,35 @@ function getIntersection(p1, p2, site1, site2) {
     const y = ( A1 * C2 - A2 * C1 ) / det;
 
     return { x, y };
+}
+
+function calcularPoligono( unidadePoligono, pontoBase, otherPonto ){
+
+    let poligonoNovo = [];
+
+    for( let i=0; i<unidadePoligono.length; i++ ){
+        let p1 = unidadePoligono[i];                                  // p2 é uma unidade a mais do indice do p1 
+        let p2 = unidadePoligono[ ( i+1 ) % unidadePoligono.length ]; // exceto quando p1 for o ultimo indice entao p2 sera 0
+
+        let p1MD = menorDistancia( p1, pontoBase, otherPonto );
+        let p2MD = menorDistancia( p2, pontoBase, otherPonto );
+
+        if( p1MD && p2MD ){
+
+            poligonoNovo.push( p2 );
+
+        } else if( p1MD && !p2MD ){
+
+            poligonoNovo.push( getIntersection( p1, p2, pontoBase, otherPonto ) );
+
+        } else if( !p1MD && p2MD ){
+
+            poligonoNovo.push( getIntersection( p1, p2, pontoBase, otherPonto ) );
+            poligonoNovo.push( p2 );
+
+        }
+    }
+    cores.push( gerarCorAleatoria() );
+    // se os dois sao falsos n faz nada
+    return poligonoNovo;
 }
