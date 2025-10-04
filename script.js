@@ -11,7 +11,7 @@ window.addEventListener('resize', function( ) {
 })
 
 let pontos = [];
-let mediatriz = [];
+let poligono = [];
 
 canvas.addEventListener('click', function(event) {
     
@@ -19,9 +19,6 @@ canvas.addEventListener('click', function(event) {
 
     pontos.push( { x : pontoClicado.x, y : pontoClicado.y } );
 
-    if( pontos.length >= 2 ){
-        mediatriz.push( CalcularMediatriz( pontos[ pontos.length-2 ], pontos[ pontos.length -1 ] ) ); // y = mx + b
-    }
 
 });
 
@@ -81,13 +78,6 @@ function Draw() {
 
 
     if ( pontos.length > 0 ) {
-
-        mediatriz.forEach( mediatriz => {
-
-            desenharMediatriz( ctx, canvas, mediatriz );
-
-        });
-
         // desenha os pontos (vértices) da forma em construção
         pontos.forEach( pontos => {
 
@@ -97,6 +87,31 @@ function Draw() {
             ctx.fill();
 
         });
+
+        // Define uma caixa delimitadora muito maior que o canvas para garantir que os polígonos sejam fechados.
+        const bounds = [-canvas.width, -canvas.height, canvas.width * 2, canvas.height * 2];
+
+        for( let i=0; i<pontos.length; i++ ){
+            for( let j=0; j<pontos.length; j++ ){
+
+                if( i == j ){
+                    continue;
+                }
+
+                let unidadePoligono = [ 
+                    { x: bounds[0], y: bounds[1] },
+                    { x: bounds[2], y: bounds[1] },
+                    { x: bounds[2], y: bounds[3] },
+                    { x: bounds[0], y: bounds[3] }
+                ];
+
+                poligonos[i] = calcularPoligono( unidadePoligono, i, j );
+
+            }
+        }
+
+
+
     }
 }
 
@@ -123,82 +138,6 @@ function Animate(){
 
 Animate();
 
-// calcula a reta mediatriz entre dois pontos
-function CalcularMediatriz( pontoA, pontoB ){ // y = mx + b
-
-    let mediatriz = {};
-    let coefAngularAB;
-    let m; // coeficiente angular da mediatriz
-
-    const pontoMedio = {
-        x : ( ( pontoA.x + pontoB.x ) / 2 ),
-        y : ( ( pontoA.y + pontoB.y ) / 2 )
-    }; 
-
-    if( pontoA.x == pontoB.x ){ // caso em que a reta é vertical "divisao por zero"
-
-        mediatriz = {  
-            m : 0,  // m -> coefAngularAB, b -> pontoMedio.y
-            b : pontoMedio.y,
-            isVertical : false
-        };
-
-    } else if( pontoA.y == pontoB.y ){ // caso em que a reta é horizontal
-        
-        mediatriz = {
-            xIntercept: pontoMedio.x,
-            isVertical: true
-        };
-
-    }else{ // retas inclinadas
-
-        coefAngularAB = ( pontoA.y - pontoB.y ) / ( pontoA.x - pontoB.x );
-        m = ( coefAngularAB ** -1 ) * -1;
-
-        mediatriz = {
-            m : m,
-            yIntercept : pontoMedio.y - ( m * pontoMedio.x ) // b = y - mx.
-        };
-    }
-
-    return mediatriz;
-
-}
-
-
-function desenharMediatriz( ctx, canvas, mediatriz ){
-
-    ctx.beginPath();
-    ctx.strokeStyle = 'red'; 
-    ctx.lineWidth = 1;
-
-    if( mediatriz.isVertical === true ) {  // reta é vertical
-
-        ctx.moveTo(mediatriz.xIntercept, 0);
-        ctx.lineTo(mediatriz.xIntercept, canvas.height);
-
-    } else if (mediatriz.m === 0) { // reta é horizontal
-        // y = mx + b
-        // A coordenada Y é constante (igual a 'b'). A linha vai da esquerda à direita.
-        ctx.moveTo(0, mediatriz.b);
-        ctx.lineTo(canvas.width, mediatriz.b);
-        
-    } else { // reta é inclinada
-        // y = mx + b
-
-        // Ponto de partida: vamos começar da borda esquerda (x=0)
-        let yNaBordaAEsquerda = mediatriz.yIntercept; // Quando x=0, y=b
-
-        // Ponto de chegada: vamos terminar na borda direita (x=canvas.width)
-        let yNaBordaADireita = mediatriz.m * canvas.width + mediatriz.yIntercept;
-
-        ctx.moveTo(0, yNaBordaAEsquerda);
-        ctx.lineTo(canvas.width, yNaBordaADireita );
-    }
-
-    ctx.stroke(); // Efetivamente desenha a linha
-
-}
 
 function gerarCorAleatoria() {
 
@@ -213,4 +152,37 @@ function gerarCorAleatoria() {
 
   return cor;
 
+}
+
+// Verifica se `testPoint` está mais perto de `p1` do que de `p2`.
+function menorDistancia( testPoint, p1, p2 ){
+    const d1_sq = (testPoint.x - p1.x) ** 2 + (testPoint.y - p1.y) ** 2;
+    const d2_sq = (testPoint.x - p2.x) ** 2 + (testPoint.y - p2.y) ** 2;
+    return d1_sq <= d2_sq; // 1 se perto de p1, 0 se perto de p2
+}
+
+
+// Calcula a interseção entre o segmento de reta (p1, p2) e a mediatriz de (site1, site2).
+function getIntersection(p1, p2, site1, site2) {
+    // Linha 1 (segmento p1-p2): A1x + B1y = C1
+    const A1 = p2.y - p1.y;
+    const B1 = p1.x - p2.x;
+    const C1 = A1 * p1.x + B1 * p1.y;
+
+    // Linha 2 (mediatriz de site1-site2)
+    const A2 = 2 * (site2.x - site1.x);
+    const B2 = 2 * (site2.y - site1.y);
+    const C2 = site2.x ** 2 - site1.x ** 2 + site2.y ** 2 - site1.y ** 2;
+
+    // Resolve o sistema de equações lineares para encontrar o ponto de interseção
+    const det = A1 * B2 - A2 * B1;
+    // Evita divisão por zero se as linhas forem paralelas
+    if ( Math.abs(det) < 1e-9 ) { 
+        return { x: p1.x, y: p1.y }; // Retorna um ponto caso não haja interseção clara
+    }
+
+    const x = ( B2 * C1 - B1 * C2 ) / det;
+    const y = ( A1 * C2 - A2 * C1 ) / det;
+
+    return { x, y };
 }
