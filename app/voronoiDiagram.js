@@ -27,6 +27,7 @@ canvas.addEventListener( 'click', function( event ) {
     const bounds = [-canvas.width, -canvas.height, canvas.width * 2, canvas.height * 2];
 
     for( let i = 0; i < pontos.length; i++ ){
+
         let unidadePoligono = [
             { x: bounds[0], y: bounds[1] }, 
             { x: bounds[2], y: bounds[1] },
@@ -52,7 +53,7 @@ canvas.addEventListener( 'click', function( event ) {
         }
 
         celula.cor = pontos[i].cor;
-        celulas.push(celula);
+        celulas.push( celula );
     }
 
     // Encontra os vizinhos para desenhar a Triangulação de Delaunay
@@ -67,6 +68,7 @@ canvas.addEventListener( 'click', function( event ) {
     // Salva e exibe os dados de desempenho
     performanceData.push( { numPontos: pontos.length, tempoMs: timeTaken } );
     console.log( `Cálculo com ${pontos.length} pontos levou ${timeTaken.toFixed(2)} ms.` );
+
 });
 
 // Função para exportar os dados de performance para um arquivo CSV
@@ -301,7 +303,7 @@ function saoArestasIguais( p1A, p2A, p1B, p2B ){
     return pontosIguais( p1A, p1B ) && pontosIguais( p2A, p2B );
 }
 
-function pontosIguais( pontoA, pontoB, tolerancia = 1e-6 ){
+function pontosIguais( pontoA, pontoB, tolerancia = 1e-6 ){ // por ser float nao tem como fazer uma comparação exata sendo necessario uso de aproximacoes
     return Math.abs( pontoA.x - pontoB.x ) < tolerancia && Math.abs( pontoA.y - pontoB.y ) < tolerancia;
 }
 
