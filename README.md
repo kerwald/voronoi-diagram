@@ -90,7 +90,7 @@ A aplicação não requer um servidor web e pode ser executada localmente.
 **FELIPE LEONARDO KERWALD SANTANA**
 
 -   **Email:** [flksantana@inf.ufpel.edu.br]
--   **GitHub:** [@seu-usuario-github](https://github.com/kerwald)
--   **LinkedIn:** [/in/seu-perfil-linkedin](https://www.linkedin.com/in/felipekerwald/])
+-   **GitHub:** [@kerwald](https://github.com/kerwald)
+-   **LinkedIn:** [Felipe Kerwald](https://www.linkedin.com/in/felipekerwald/])
 
 ---
