@@ -10,59 +10,58 @@ window.addEventListener('resize', function( ) {
     canvas.height = window.innerHeight;
 })
 
-let celulas = [];
 
+let celulas = [];
 let pontos = [];
-let poligonos = [];
-let cores = [];
-let i = 0;
 
 
 canvas.addEventListener('click', function(event) {
     
     const pontoClicado = { x: event.clientX, y: event.clientY };
-
-    pontos.push( { x : pontoClicado.x, y : pontoClicado.y } );
-
+    pontos.push( { x : pontoClicado.x, y : pontoClicado.y, cor : gerarCorAleatoria() });
+    celulas = [];
 
     // Define uma caixa delimitadora muito maior que o canvas para garantir que os polígonos sejam fechados.
     const bounds = [-canvas.width, -canvas.height, canvas.width * 2, canvas.height * 2];
 
+    for( let i=0; i< pontos.length; i++ ){
+        let unidadePoligono = [ 
+        { x: bounds[0], y: bounds[1] },
+        { x: bounds[2], y: bounds[1] },
+        { x: bounds[2], y: bounds[3] },
+        { x: bounds[0], y: bounds[3] }
+        ];
 
-    let unidadePoligono = [ 
-    { x: bounds[0], y: bounds[1] },
-    { x: bounds[2], y: bounds[1] },
-    { x: bounds[2], y: bounds[3] },
-    { x: bounds[0], y: bounds[3] }
-    ];
+
+        let celula = {
+            poligono : unidadePoligono,
+            ponto : pontos[ i ],
+            cor : null,
+            vizinhos : []
+
+        };
+
+        for( let j=0; j<pontos.length; j++ ){
 
 
-    let celula = {
-        poligono : unidadePoligono,
-        ponto : pontos[length - 1],
-        cor : gerarCorAleatoria(),
-        vizinhos : []
+            if( i == j ){
+                continue;
+            }
 
-    };
+            celula = calcularPoligono( celula, pontos[ i ], pontos[j] );
 
-    for( let j=0; j<pontos.length; j++ ){
-
-        if( i == j ){
-            continue;
         }
 
-        celula = calcularPoligono( celula, pontos[i], pontos[j] );
-        
+        celula.cor = pontos[i].cor;
+        celulas.push( celula );
 
     }
 
+    for (let i = 0; i < celulas.length; i++) {
+    encontrarVizinhos(celulas[i], celulas);
+    }
+
     
-    celula.cor = gerarCorAleatoria();
-    celulas.push( celula );
-    calcularTriangulacao();
-    i++;
-
-
 });
 
 
@@ -126,6 +125,7 @@ function Draw() {
             if( celula.poligono.length > 2 ){
                 ctx.beginPath();
                 ctx.moveTo( celula.poligono[0].x, celula.poligono[0].y );
+
                 for( let j=0; j<celula.poligono.length; j++ ){
 
                     ctx.lineTo( celula.poligono[j].x, celula.poligono[j].y );
@@ -144,6 +144,17 @@ function Draw() {
 
         } );
 
+        celulas.forEach(c => {
+            for (let i = 0; i < c.vizinhos.length; i++) {
+                ctx.beginPath();
+                ctx.moveTo(c.ponto.x, c.ponto.y);
+                let vizinhoPonto = c.vizinhos[i].ponto; 
+                ctx.lineTo(vizinhoPonto.x, vizinhoPonto.y);
+                ctx.strokeStyle = '#ff7700ff'; 
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+        });
 
         // desenha os pontos (vértices) da forma em construção
         for( let i=0; i< pontos.length; i++ ){
@@ -267,7 +278,7 @@ function calcularPoligono( celula, pontoBase, otherPonto ){
     let celulanovo = {
         poligono : poligonoNovo,
         ponto : pontoBase,
-        cor : gerarCorAleatoria(),
+        cor : null,
         vizinhos : []
     }
 
@@ -275,40 +286,66 @@ function calcularPoligono( celula, pontoBase, otherPonto ){
     return celulanovo;
 }
 
-function calcularTriangulacao(){
 
-    celulas.forEach( c => {
+// Função que verifica se duas células possuem uma aresta em comum
+function temArestaComum( celulaA, celulaB ) {
+    const poligonoA = celulaA.poligono;
+    const poligonoB = celulaB.poligono;
+    
+    // Para cada aresta do polígono A
+    for ( let i = 0; i < poligonoA.length; i++ ) {
+        const pontoA1 = poligonoA[i];
+        const pontoA2 = poligonoA[(i + 1) % poligonoA.length];
         
-        for( let i=0; i<celulas.length; i++ ){
-
-            if( c == celulas[i] ){
-                continue;
+        // Para cada aresta do polígono B
+        for ( let j = 0; j < poligonoB.length; j++ ) {
+            const pontoB1 = poligonoB[j];
+            const pontoB2 = poligonoB[(j + 1) % poligonoB.length];
+            
+            // Verifica se as arestas são iguais (mesmos pontos, mesma direção)
+            if ( saoArestasIguais( pontoA1, pontoA2, pontoB1, pontoB2 ) ) {
+                return true;
             }
             
-            if( arestasIguais( c.poligono, celulas[i].poligono ) ){
-                c.vizinhos.push( celulas[i].ponto );
+            // Verifica se as arestas são iguais mas em direção oposta
+            if ( saoArestasIguais(pontoA1, pontoA2, pontoB2, pontoB1 ) ) {
+                return true;
             }
         }
-
-    } );
+    }
     
+    return false;
 }
 
-function arestasIguais( poli1, poli2 ){
-    let a1 = [];
-    let a2 = [];
-    for( let i=0; i<poli1.length; i++ ){
-        for(let j=0; j<poli2.length; j++){
-            a1[0] = poli1[i];
-            a1[1] = poli1[ (i+1) % poli1.length ];
-            a2[0] = poli2[j];
-            a2[1] = poli2[ (j+1) % poli2.length ];
+// Função auxiliar para verificar se duas arestas são iguais
+function saoArestasIguais( p1A, p2A, p1B, p2B ) {
+    return (
+        pontosIguais( p1A, p1B ) && 
+        pontosIguais( p2A, p2B )
+    );
+}
 
-            if( ( a1[0].x == a2[0].x && a1[0].y == a2[0].y && a1[1].x == a2[1].x && a1[1].y == a2[1].y ) || ( a1[0].y == a2[0].x && a1[0].x == a2[0].y && a1[1].y == a2[1].x && a1[1].x == a2[1].y )  ){
-            return true;
-            }  
+// Função auxiliar para verificar se dois pontos são iguais (com tolerância para erros de floating point)
+function pontosIguais( pontoA, pontoB, tolerancia = 1e-9 ) {
+    return (
+        Math.abs( pontoA.x - pontoB.x ) < tolerancia && 
+        Math.abs( pontoA.y - pontoB.y ) < tolerancia
+    );
+}
 
+// Função para encontrar todas as células vizinhas de uma célula específica
+function encontrarVizinhos( celulaAlvo, todasCelulas ) {
+
+    const vizinhos = [];
+    
+    for ( const celula of todasCelulas ) {
+        // Não comparar a célula com ela mesma
+        if (celula === celulaAlvo) continue;
+        
+        if ( temArestaComum( celulaAlvo, celula ) ) {
+            celulaAlvo.vizinhos.push( celula );
         }
+
     }
 
 }
