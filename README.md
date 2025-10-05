@@ -11,7 +11,7 @@ Nesses vídeos, demonstro o funcionamento de cada algoritmo implementado na apli
 
 | Algoritmo Incremental (Geométrico) | Algoritmo de Força Bruta (Pixel-based) |
 | :---: | :---: |
-| [Assistir Vídeo](videos-demonstrativos/Diagrama-de-Voronoi-Incremental-e-Triangulacao-de-Deulanay.mp4.mp4) | [Assistir Vídeo](videos-demonstrativos/Diagrama-de-Voronoi-Forca-Bruta.mp4) |
+| [Assistir Vídeo](videos-demonstrativos/Diagrama-de-Voronoi-Incremental-e-Triangulacao-de-Deulanay.mp4) | [Assistir Vídeo](videos-demonstrativos/Diagrama-de-Voronoi-Forca-Bruta.mp4) |
 
 ---
 
@@ -49,7 +49,7 @@ Os resultados completos, incluindo os gráficos de desempenho e as conclusões, 
 
 Para ilustrar o processo lógico do algoritmo incremental, foi feita uma simulação manual passo a passo. A imagem abaixo demonstra como o polígono de uma célula é progressivamente recortado pelas mediatrizes dos pontos vizinhos.
 
-![Simulação do Algoritmo Incremental](graficos-e-anotacoes/anotacao-demonstracao-de-funcionamento.png)
+![Simulação do Algoritmo Incremental](graficos-e-anotacoes/anotacao-demonstracao-de-funcionamento.pdf)
 
 #### Comparativo Geral de Desempenho
 
