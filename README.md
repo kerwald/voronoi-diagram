@@ -5,6 +5,34 @@ Implementação e análise de desempenho de dois algoritmos para a geração de 
 
 ---
 
+## Aplicação que utiliza o Diagrama de Voronoi: Astronomia e a Estrutura Cósmica
+
+### O Desafio: Mapeando o Vazio do Universo
+
+Quando olhamos para o universo em grande escala, as galáxias não estão distribuídas de forma uniforme. Elas se organizam em uma estrutura complexa e filamentar, conhecida como a **"teia cósmica"** (*cosmic web*). Essa teia é composta por densos aglomerados de galáxias, longos filamentos que as conectam e, entre tudo isso, vastas regiões de espaço quase completamente vazio.
+
+Essas regiões, conhecidas como **vazios cósmicos**, são componentes fundamentais da estrutura do universo, mas identificá-las e definir suas fronteiras é um desafio complexo. Como podemos, a partir de um conjunto de pontos (as galáxias), definir objetivamente as áreas que representam o "nada"?
+
+### A Solução Geométrica: Tesselação de Voronoi
+
+É aqui que o Diagrama de Voronoi se torna uma ferramenta poderosa. Os cosmologistas aplicam este método da seguinte forma:
+
+1.  **Mapeamento das Galáxias**: Os dados de levantamentos astronômicos (como o *Sloan Digital Sky Survey*) fornecem as posições tridimensionais de milhões de galáxias. Cada galáxia é tratada como um "ponto" ou "semente" no espaço.
+
+2.  **Construção do Diagrama**: Um Diagrama de Voronoi 3D (ou tesselação) é construído a partir desses pontos. O espaço do universo é dividido em células poliédricas, onde cada célula contém exatamente uma galáxia. A principal propriedade se mantém: qualquer ponto dentro de uma célula está mais próximo da galáxia contida nela do que de qualquer outra.
+
+3.  **Identificação dos Vazios**: As células de Voronoi associadas a galáxias em regiões de baixa densidade serão, por natureza, muito maiores do que as células em aglomerados densos. Os vazios cósmicos correspondem, portanto, às maiores células do diagrama. Ao analisar a distribuição dos volumes dessas células, os cientistas podem:
+    * **Identificar vazios de forma objetiva**: Em vez de uma inspeção visual subjetiva, o método fornece uma definição matemática para o que constitui um vazio.
+    * **Medir suas propriedades**: É possível calcular o volume, a forma e a distribuição dos vazios, informações cruciais para testar modelos cosmológicos.
+    * **Estudar a física dos vazios**: Essas regiões não são completamente vazias; elas são dominadas por energia escura e podem conter matéria escura. O estudo da forma e do tamanho dos vazios ajuda os cientistas a entender a natureza da energia escura e a taxa de expansão do universo.
+
+### Por que é Tão Impactante?
+  Esta aplicação demonstra como um conceito de geometria computacional pode ser usado para responder a perguntas fundamentais sobre o universo. A técnica de tesselação de Voronoi oferece uma maneira elegante e não paramétrica de caracterizar a estrutura da teia cósmica, permitindo que os astrônomos transformem um "mapa de pontos" de galáxias em um mapa estruturado de filamentos e vazios.
+
+Isso nos ajuda a testar o Modelo Cosmológico Padrão (Lambda-CDM) e a entender as forças, como a gravidade e a energia escura, que esculpiram o universo na forma como o vemos hoje.
+
+---
+
 ### 🎥 Vídeos Demonstrativos
 
 Nesses vídeos, demonstro o funcionamento de cada algoritmo implementado na aplicação web.
@@ -54,6 +82,10 @@ Para ilustrar o processo lógico do algoritmo incremental, foi feita uma simula�
 #### Comparativo Geral de Desempenho
 
 ![Gráfico Comparativo Geral](graficos-e-anotacoes/grafico-de-desempenho.png)
+### Custo Computacional:
+O algoritmo geométrico, (O(n²)) no caso medio, é melhor quando o número de pontos n é pequeno, médio, pois ele não se importa com o tamanho da tela. Ele calcula a estrutura exata do diagrama.
+
+Este algoritmo de grade (O(P * n)) pode ser mais rápido quando n é muito grande e a resolução P é relativamente baixa. No entanto, ele apenas produz uma aproximação visual do diagrama, não a sua definição geométrica precisa.
 
 ---
 ### 🚀 Como Executar
