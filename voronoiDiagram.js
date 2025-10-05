@@ -1,94 +1,85 @@
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
+const canvas = document.getElementById( 'canvas' );
+const ctx = canvas.getContext( '2d' );
+const performanceLogDiv = document.getElementById( 'performance-log' );
 
-console.log(ctx);
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-window.addEventListener('resize', function( ) {
+window.addEventListener( 'resize', function() {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-})
+});
 
-
-let celulas = [];
 let pontos = [];
+let celulas = [];
+let performanceData = [];
 
-
-canvas.addEventListener('click', function(event) {
-    
+canvas.addEventListener( 'click', function( event ) {
     const pontoClicado = { x: event.clientX, y: event.clientY };
-    pontos.push( { x : pontoClicado.x, y : pontoClicado.y, cor : gerarCorAleatoria() });
-    celulas = [];
+    pontos.push({ x: pontoClicado.x, y: pontoClicado.y, cor: gerarCorAleatoria() });
 
-    // Define uma caixa delimitadora muito maior que o canvas para garantir que os polígonos sejam fechados.
+    // medição de desempenho
+    const startTime = performance.now();
+
+    celulas = [];
+    
+    // Define uma caixa delimitadora grande para garantir que os polígonos sejam fechados.
     const bounds = [-canvas.width, -canvas.height, canvas.width * 2, canvas.height * 2];
 
-    for( let i=0; i< pontos.length; i++ ){
-        let unidadePoligono = [ 
-        { x: bounds[0], y: bounds[1] },
-        { x: bounds[2], y: bounds[1] },
-        { x: bounds[2], y: bounds[3] },
-        { x: bounds[0], y: bounds[3] }
+    for( let i = 0; i < pontos.length; i++ ){
+        let unidadePoligono = [
+            { x: bounds[0], y: bounds[1] }, 
+            { x: bounds[2], y: bounds[1] },
+            { x: bounds[2], y: bounds[3] }, 
+            { x: bounds[0], y: bounds[3] }
         ];
 
-
         let celula = {
-            poligono : unidadePoligono,
-            ponto : pontos[ i ],
-            cor : null,
-            vizinhos : []
-
+            poligono: unidadePoligono,
+            ponto: pontos[i],
+            cor: null,
+            vizinhos: []
         };
 
-        for( let j=0; j<pontos.length; j++ ){
+        // Recorta o polígono da célula com base em todos os outros pontos
+        for( let j = 0; j < pontos.length; j++ ){
 
-
-            if( i == j ){
+            if( i === j ){
                 continue;
-            }
+            } 
 
-            celula = calcularPoligono( celula, pontos[ i ], pontos[j] );
-
+            celula = calcularPoligono( celula, pontos[i], pontos[j] );
         }
 
         celula.cor = pontos[i].cor;
-        celulas.push( celula );
-
+        celulas.push(celula);
     }
 
-    for (let i = 0; i < celulas.length; i++) {
-    encontrarVizinhos(celulas[i], celulas);
+    // Encontra os vizinhos para desenhar a Triangulação de Delaunay
+    for( let i = 0; i < celulas.length; i++ ){
+        encontrarVizinhos( celulas[i], celulas );
     }
-
     
+    // --- Fim da Medição de Desempenho ---
+    const endTime = performance.now();
+    const timeTaken = endTime - startTime;
+
+    // Salva e exibe os dados de desempenho
+    performanceData.push( { numPontos: pontos.length, tempoMs: timeTaken } );
+    console.log( `Cálculo com ${pontos.length} pontos levou ${timeTaken.toFixed(2)} ms.` );
 });
 
-
-
-function converterParaCSV( logDeEventos ) {
-
-    // Cria o cabeçalho
-    const cabecalho = [ 'timestamp', 'tipo', 'x', 'y', 'objetoId' ];
-    
-    // Mapeia cada objeto de log para uma linha de CSV
-    const linhas = logDeEventos.map( evento => 
-        cabecalho.map( coluna => evento[coluna]).join(',')
-    );
-
-    // Junta o cabeçalho com as linhas
-    return [ cabecalho.join(','), ...linhas ].join('\n');
-
-}
-
+// Função para exportar os dados de performance para um arquivo CSV
 function exportarLogEmCSV( log, nomeDoArquivo ) {
-
     if ( log.length === 0 ) {
-        alert('Nenhum dado para exportar!');
+        alert( 'Nenhum dado de performance para exportar! Adicione alguns pontos primeiro.' );
         return;
     }
+    
+    const cabecalho = [ 'numPontos', 'tempoMs' ];
+    const linhas = log.map( dado => [ dado.numPontos, dado.tempoMs.toFixed(4) ].join(',') );
+    const conteudoCSV = [ cabecalho.join(','), ...linhas].join('\n' );
 
-    const conteudoCSV = converterParaCSV( log );
     const blob = new Blob( [conteudoCSV], { type: 'text/csv;charset=utf-8;' } );
     const url = URL.createObjectURL( blob );
     const a = document.createElement( 'a' );
@@ -99,253 +90,228 @@ function exportarLogEmCSV( log, nomeDoArquivo ) {
     a.click();
     document.body.removeChild( a );
     URL.revokeObjectURL( url );
-
 }
 
-// No seu botão de exportar
-document.getElementById('exportar-btn').addEventListener('click', function() {
-    exportarLogEmCSV( logDeEventos, 'log_de_execucao.csv' );
+document.getElementById( 'export-btn' ).addEventListener( 'click', function() {
+    exportarLogEmCSV( performanceData, 'performance_voronoi.csv' );
 });
 
 
 /*
 ==========================================================
-Draw
-
-Responsável por desenha os pontos e o diagrama de voronoi
+ FUNÇÕES DE DESENHO
 ==========================================================
 */
-
 function Draw() {
+    // Desenha o diagrama de Voronoi
+    celulas.forEach( celula => {
 
+        if( celula.poligono.length > 2 ){
 
-    if ( celulas.length > 0 ) {
-
-        celulas.forEach( celula => {
-            if( celula.poligono.length > 2 ){
-                ctx.beginPath();
-                ctx.moveTo( celula.poligono[0].x, celula.poligono[0].y );
-
-                for( let j=0; j<celula.poligono.length; j++ ){
-
-                    ctx.lineTo( celula.poligono[j].x, celula.poligono[j].y );
-
-                }
-
-                ctx.closePath();
-                ctx.fillStyle = celula.cor;
-                ctx.fill();
-
-                // Desenha as bordas da célula
-                ctx.strokeStyle = '#374151'; // cinza escuro
-                ctx.lineWidth = 2;
-                ctx.stroke();
-            }
-
-        } );
-
-        celulas.forEach(c => {
-            for (let i = 0; i < c.vizinhos.length; i++) {
-                ctx.beginPath();
-                ctx.moveTo(c.ponto.x, c.ponto.y);
-                let vizinhoPonto = c.vizinhos[i].ponto; 
-                ctx.lineTo(vizinhoPonto.x, vizinhoPonto.y);
-                ctx.strokeStyle = '#ff7700ff'; 
-                ctx.lineWidth = 1;
-                ctx.stroke();
-            }
-        });
-
-        // desenha os pontos (vértices) da forma em construção
-        for( let i=0; i< pontos.length; i++ ){
-
-            ctx.fillStyle = '#ff7700ff';
             ctx.beginPath();
-            ctx.arc( pontos[i].x, pontos[i].y, 5, 0, Math.PI * 2);
+            ctx.moveTo( celula.poligono[0].x, celula.poligono[0].y );
+
+            for( let j = 1; j < celula.poligono.length; j++ ){
+
+                ctx.lineTo( celula.poligono[j].x, celula.poligono[j].y );
+
+            }
+
+            ctx.closePath();
+            ctx.fillStyle = celula.cor;
             ctx.fill();
-            // Desenha as bordas da célula
-            ctx.strokeStyle = '#ffffffff'; 
+            ctx.strokeStyle = '#374151'; // Borda cinza escuro
             ctx.lineWidth = 2;
             ctx.stroke();
 
         }
 
-    }
+    });
+
+    // Desenha a Triangulação de Delaunay (gráfico dual)
+    celulas.forEach(c => {
+
+        // Para evitar desenhar arestas duplicadas, só desenhamos se o 'hash' do ponto atual for menor
+        c.vizinhos.forEach( vizinho => {
+
+            if( c.ponto.x + c.ponto.y < vizinho.ponto.x + vizinho.ponto.y ){
+
+                 ctx.beginPath();
+                 ctx.moveTo(c.ponto.x, c.ponto.y);
+                 ctx.lineTo(vizinho.ponto.x, vizinho.ponto.y);
+                 ctx.strokeStyle = '#FFFFFF'; // Branco
+                 ctx.lineWidth = 1;
+                 ctx.stroke();
+
+            }
+
+        });
+
+    });
+
+    // Desenha os pontos 
+    pontos.forEach( ponto => {
+
+        ctx.fillStyle = '#ff7700'; // Laranja
+        ctx.beginPath();
+        ctx.arc( ponto.x, ponto.y, 5, 0, Math.PI * 2 );
+        ctx.fill();
+        ctx.strokeStyle = '#FFFFFF'; // Borda branca
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+    });
+
 }
 
+function Animate() {
 
-/*
-==========================================================
-Animate
-
-Mantém a animação em loop, limpando a tela e redesenhando os elementos com o uso do requestAnimationFrame.
-==========================================================
-*/
-function Animate(){
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height );
-
-    ctx.fillStyle = "black";
-    ctx.fillRect( 0, 0, canvas.width, canvas.height );
-  
+    ctx.clearRect( 0, 0, canvas.width, canvas.height );
+    ctx.fillStyle = "#111827"; // Fundo cinza escuro
+    ctx.fillRect( 0, 0, canvas.width, canvas.height) ;
     Draw();
-
     requestAnimationFrame( Animate );
-    
+
 }
 
 Animate();
 
+/*
+==========================================================
+ LÓGICA DO ALGORITMO DE VORONOI
+==========================================================
+*/
 
 function gerarCorAleatoria() {
 
-  const letras = '0123456789ABCDEF';
-  let cor = '#';
+    const letras = '0123456789ABCDEF';
+    let cor = '#';
+    for( let i = 0; i < 6; i++ ){
 
-  for ( let i = 0; i < 6; i++ ) {
+        cor += letras[Math.floor( Math.random() * 16 )];
 
-    cor += letras[ Math.floor( Math.random() * 16 ) ];
+    }
 
-  }
-
-  return cor;
+    return cor;
 
 }
 
 // Verifica se `testPoint` está mais perto de `p1` do que de `p2`.
 function menorDistancia( testPoint, p1, p2 ){
-    const d1_sq = (testPoint.x - p1.x) ** 2 + (testPoint.y - p1.y) ** 2;
-    const d2_sq = (testPoint.x - p2.x) ** 2 + (testPoint.y - p2.y) ** 2;
-    return d1_sq <= d2_sq; // 1 se perto de p1, 0 se perto de p2
+
+    const d1_sq = ( testPoint.x - p1.x ) ** 2 + ( testPoint.y - p1.y ) ** 2;
+    const d2_sq = ( testPoint.x - p2.x ) ** 2 + ( testPoint.y - p2.y ) ** 2;
+    return d1_sq <= d2_sq;
+
 }
 
-
 // Calcula a interseção entre o segmento de reta (p1, p2) e a mediatriz de (site1, site2).
-function getIntersection(p1, p2, site1, site2) {
-    // Linha 1 (segmento p1-p2): A1x + B1y = C1
+function getIntersection( p1, p2, site1, site2 ) {
+
     const A1 = p2.y - p1.y;
     const B1 = p1.x - p2.x;
     const C1 = A1 * p1.x + B1 * p1.y;
 
-    // Linha 2 (mediatriz de site1-site2)
-    const A2 = 2 * (site2.x - site1.x);
-    const B2 = 2 * (site2.y - site1.y);
+    const A2 = 2 * ( site2.x - site1.x );
+    const B2 = 2 * ( site2.y - site1.y );
     const C2 = site2.x ** 2 - site1.x ** 2 + site2.y ** 2 - site1.y ** 2;
 
-    // Resolve o sistema de equações lineares para encontrar o ponto de interseção
     const det = A1 * B2 - A2 * B1;
-    // Evita divisão por zero se as linhas forem paralelas
-    if ( Math.abs(det) < 1e-9 ) { 
-        return { x: p1.x, y: p1.y }; // Retorna um ponto caso não haja interseção clara
-    }
+    if( Math.abs(det) < 1e-9 ){
+        return null; // Linhas paralelas
+    } 
 
-    const x = ( B2 * C1 - B1 * C2 ) / det;
-    const y = ( A1 * C2 - A2 * C1 ) / det;
-
+    const x = (B2 * C1 - B1 * C2) / det;
+    const y = (A1 * C2 - A2 * C1) / det;
     return { x, y };
+
 }
 
-function calcularPoligono( celula, pontoBase, otherPonto ){
-
+// Recorta um polígono (da célula) contra o semi-plano definido pela mediatriz de pontoBase e otherPonto
+function calcularPoligono(celula, pontoBase, otherPonto) {
+    
     let poligonoNovo = [];
+    const poligonoOriginal = celula.poligono;
 
-    for( let i=0; i < celula.poligono.length; i++ ){
+    for( let i = 0; i < poligonoOriginal.length; i++ ) {
 
-        let p1 = celula.poligono[i];                                  // p2 é uma unidade a mais do indice do p1 
-        let p2 = celula.poligono[ ( i+1 ) % celula.poligono.length ]; // exceto quando p1 for o ultimo indice entao p2 sera 0
+        const p1 = poligonoOriginal[i];
+        const p2 = poligonoOriginal[ ( i + 1 ) % poligonoOriginal.length ];
 
-        let p1MD = menorDistancia( p1, pontoBase, otherPonto );
-        let p2MD = menorDistancia( p2, pontoBase, otherPonto );
+        const p1EstaPerto = menorDistancia( p1, pontoBase, otherPonto );
+        const p2EstaPerto = menorDistancia( p2, pontoBase, otherPonto );
 
-        if( p1MD && p2MD ){
+        if( p1EstaPerto ){
 
-            poligonoNovo.push( p2 );
-
-        } else if( p1MD && !p2MD ){
-
-            poligonoNovo.push( getIntersection( p1, p2, pontoBase, otherPonto ) );
-           
-
-        } else if( !p1MD && p2MD ){
-
-            poligonoNovo.push( getIntersection( p1, p2, pontoBase, otherPonto ) );
-            poligonoNovo.push( p2 );
+            poligonoNovo.push( p1 );
 
         }
-         // se os dois sao falsos n faz nada
-    }
 
-    let celulanovo = {
-        poligono : poligonoNovo,
-        ponto : pontoBase,
-        cor : null,
-        vizinhos : []
-    }
+        // Se a aresta (p1, p2) cruza a mediatriz
+        if( p1EstaPerto !== p2EstaPerto ){
 
-   
-    return celulanovo;
+            const intersection = getIntersection( p1, p2, pontoBase, otherPonto );
+
+            if( intersection ){
+
+                poligonoNovo.push( intersection );
+
+            }
+        }
+    }
+    
+    // Retorna a célula atualizada com o novo polígono recortado
+    celula.poligono = poligonoNovo;
+    return celula;
+
 }
 
+/*
+==========================================================
+ LÓGICA DA TRIANGULAÇÃO DE DELAUNAY (VIZINHOS)
+==========================================================
+*/
 
-// Função que verifica se duas células possuem uma aresta em comum
+// Verifica se duas células são vizinhas (compartilham uma aresta)
 function temArestaComum( celulaA, celulaB ) {
+
     const poligonoA = celulaA.poligono;
     const poligonoB = celulaB.poligono;
     
-    // Para cada aresta do polígono A
-    for ( let i = 0; i < poligonoA.length; i++ ) {
-        const pontoA1 = poligonoA[i];
-        const pontoA2 = poligonoA[(i + 1) % poligonoA.length];
+    for( let i = 0; i < poligonoA.length; i++ ){
+
+        const pA1 = poligonoA[i];
+        const pA2 = poligonoA[ ( i + 1 ) % poligonoA.length ];
         
-        // Para cada aresta do polígono B
-        for ( let j = 0; j < poligonoB.length; j++ ) {
-            const pontoB1 = poligonoB[j];
-            const pontoB2 = poligonoB[(j + 1) % poligonoB.length];
+        for( let j = 0; j < poligonoB.length; j++ ){
+
+            const pB1 = poligonoB[j];
+            const pB2 = poligonoB[ ( j + 1 ) % poligonoB.length ];
             
-            // Verifica se as arestas são iguais (mesmos pontos, mesma direção)
-            if ( saoArestasIguais( pontoA1, pontoA2, pontoB1, pontoB2 ) ) {
-                return true;
-            }
-            
-            // Verifica se as arestas são iguais mas em direção oposta
-            if ( saoArestasIguais(pontoA1, pontoA2, pontoB2, pontoB1 ) ) {
+            // Verifica se a aresta de A é a mesma que a aresta de B (em qualquer direção)
+            if( saoArestasIguais( pA1, pA2, pB1, pB2 ) || saoArestasIguais( pA1, pA2, pB2, pB1 ) ){
                 return true;
             }
         }
     }
-    
     return false;
 }
 
-// Função auxiliar para verificar se duas arestas são iguais
-function saoArestasIguais( p1A, p2A, p1B, p2B ) {
-    return (
-        pontosIguais( p1A, p1B ) && 
-        pontosIguais( p2A, p2B )
-    );
+function saoArestasIguais( p1A, p2A, p1B, p2B ){
+    return pontosIguais( p1A, p1B ) && pontosIguais( p2A, p2B );
 }
 
-// Função auxiliar para verificar se dois pontos são iguais (com tolerância para erros de floating point)
-function pontosIguais( pontoA, pontoB, tolerancia = 1e-9 ) {
-    return (
-        Math.abs( pontoA.x - pontoB.x ) < tolerancia && 
-        Math.abs( pontoA.y - pontoB.y ) < tolerancia
-    );
+function pontosIguais( pontoA, pontoB, tolerancia = 1e-6 ){
+    return Math.abs( pontoA.x - pontoB.x ) < tolerancia && Math.abs( pontoA.y - pontoB.y ) < tolerancia;
 }
 
-// Função para encontrar todas as células vizinhas de uma célula específica
 function encontrarVizinhos( celulaAlvo, todasCelulas ) {
-
-    const vizinhos = [];
-    
-    for ( const celula of todasCelulas ) {
-        // Não comparar a célula com ela mesma
-        if (celula === celulaAlvo) continue;
+    celulaAlvo.vizinhos = []; // Limpa vizinhos antigos
+    for( const outraCelula of todasCelulas ){
+        if( celulaAlvo === outraCelula ) continue;
         
-        if ( temArestaComum( celulaAlvo, celula ) ) {
-            celulaAlvo.vizinhos.push( celula );
+        if( temArestaComum( celulaAlvo, outraCelula ) ){
+            celulaAlvo.vizinhos.push( outraCelula );
         }
-
     }
-
 }
