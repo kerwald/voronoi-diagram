@@ -19,8 +19,8 @@ Nesses vídeos, demonstro o funcionamento de cada algoritmo implementado na apli
 
 Este projeto implementa e compara o desempenho de dois algoritmos distintos para a geração de Diagramas de Voronoi:
 
-1.  **Algoritmo Incremental (Geométrico, O(n³)):** Uma abordagem de recorte de polígonos que calcula as bordas exatas de cada célula.
-2.  **Algoritmo de Força Bruta (Pixel-based, O(n)):** Uma abordagem que determina a célula mais próxima para cada pixel na tela.
+1.  **Algoritmo Incremental (Geométrico, uma abordagem de recorte de polígonos que calcula as bordas exatas de cada célula.
+2.  **Algoritmo de Força Bruta (Pixel-based, uma abordagem que determina a célula mais próxima para cada pixel na tela.
 
 A aplicação web (`/app`) permite a coleta de dados de desempenho, que são analisados em um Notebook do Google Colab (`/analise`) para comparar o impacto do número de pontos e de sua distribuição no tempo de execução.
 
