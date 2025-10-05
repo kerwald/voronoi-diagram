@@ -10,9 +10,13 @@ window.addEventListener('resize', function( ) {
     canvas.height = window.innerHeight;
 })
 
+let celulas = [];
+
 let pontos = [];
 let poligonos = [];
 let cores = [];
+let i = 0;
+
 
 canvas.addEventListener('click', function(event) {
     
@@ -20,29 +24,43 @@ canvas.addEventListener('click', function(event) {
 
     pontos.push( { x : pontoClicado.x, y : pontoClicado.y } );
 
+
     // Define uma caixa delimitadora muito maior que o canvas para garantir que os polígonos sejam fechados.
     const bounds = [-canvas.width, -canvas.height, canvas.width * 2, canvas.height * 2];
 
-    for( let i=0; i<pontos.length; i++ ){
 
-        let unidadePoligono = [ 
-        { x: bounds[0], y: bounds[1] },
-        { x: bounds[2], y: bounds[1] },
-        { x: bounds[2], y: bounds[3] },
-        { x: bounds[0], y: bounds[3] }
-        ];
+    let unidadePoligono = [ 
+    { x: bounds[0], y: bounds[1] },
+    { x: bounds[2], y: bounds[1] },
+    { x: bounds[2], y: bounds[3] },
+    { x: bounds[0], y: bounds[3] }
+    ];
 
-        for( let j=0; j<pontos.length; j++ ){
 
-            if( i == j ){
-                continue;
-            }
+    let celula = {
+        poligono : unidadePoligono,
+        ponto : pontos[length - 1],
+        cor : gerarCorAleatoria(),
+        vizinhos : []
 
-            unidadePoligono = calcularPoligono( unidadePoligono, pontos[i], pontos[j] );
-            poligonos[i] = unidadePoligono;
+    };
 
+    for( let j=0; j<pontos.length; j++ ){
+
+        if( i == j ){
+            continue;
         }
+
+        celula = calcularPoligono( celula, pontos[i], pontos[j] );
+        
+
     }
+
+    
+    celula.cor = gerarCorAleatoria();
+    celulas.push( celula );
+    calcularTriangulacao();
+    i++;
 
 
 });
@@ -102,45 +120,44 @@ Responsável por desenha os pontos e o diagrama de voronoi
 function Draw() {
 
 
-    if ( pontos.length > 0 ) {
+    if ( celulas.length > 0 ) {
 
-        for( let i=0; i < poligonos.length; i++ ){
+        celulas.forEach( celula => {
+            if( celula.poligono.length > 2 ){
+                ctx.beginPath();
+                ctx.moveTo( celula.poligono[0].x, celula.poligono[0].y );
+                for( let j=0; j<celula.poligono.length; j++ ){
 
-            if( poligonos[i].length < 3 ){
-                continue;
+                    ctx.lineTo( celula.poligono[j].x, celula.poligono[j].y );
+
+                }
+
+                ctx.closePath();
+                ctx.fillStyle = celula.cor;
+                ctx.fill();
+
+                // Desenha as bordas da célula
+                ctx.strokeStyle = '#374151'; // cinza escuro
+                ctx.lineWidth = 2;
+                ctx.stroke();
             }
 
-            ctx.beginPath();
-            ctx.moveTo( poligonos[i][0].x, poligonos[i][0].y );
-            for( let j=0; j<poligonos[i].length; j++ ){
+        } );
 
-                ctx.lineTo( poligonos[i][j].x, poligonos[i][j].y );
-
-            }
-
-            ctx.closePath();
-            ctx.fillStyle = cores[i];
-            ctx.fill();
-
-            // Desenha as bordas da célula
-            ctx.strokeStyle = '#374151'; // cinza escuro
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-        }
 
         // desenha os pontos (vértices) da forma em construção
-        pontos.forEach( p => {
+        for( let i=0; i< pontos.length; i++ ){
+
             ctx.fillStyle = '#ff7700ff';
             ctx.beginPath();
-            ctx.arc( p.x, p.y, 5, 0, Math.PI * 2);
+            ctx.arc( pontos[i].x, pontos[i].y, 5, 0, Math.PI * 2);
             ctx.fill();
             // Desenha as bordas da célula
             ctx.strokeStyle = '#ffffffff'; 
             ctx.lineWidth = 2;
             ctx.stroke();
 
-        });
+        }
 
     }
 }
@@ -217,13 +234,14 @@ function getIntersection(p1, p2, site1, site2) {
     return { x, y };
 }
 
-function calcularPoligono( unidadePoligono, pontoBase, otherPonto ){
+function calcularPoligono( celula, pontoBase, otherPonto ){
 
     let poligonoNovo = [];
 
-    for( let i=0; i<unidadePoligono.length; i++ ){
-        let p1 = unidadePoligono[i];                                  // p2 é uma unidade a mais do indice do p1 
-        let p2 = unidadePoligono[ ( i+1 ) % unidadePoligono.length ]; // exceto quando p1 for o ultimo indice entao p2 sera 0
+    for( let i=0; i < celula.poligono.length; i++ ){
+
+        let p1 = celula.poligono[i];                                  // p2 é uma unidade a mais do indice do p1 
+        let p2 = celula.poligono[ ( i+1 ) % celula.poligono.length ]; // exceto quando p1 for o ultimo indice entao p2 sera 0
 
         let p1MD = menorDistancia( p1, pontoBase, otherPonto );
         let p2MD = menorDistancia( p2, pontoBase, otherPonto );
@@ -235,6 +253,7 @@ function calcularPoligono( unidadePoligono, pontoBase, otherPonto ){
         } else if( p1MD && !p2MD ){
 
             poligonoNovo.push( getIntersection( p1, p2, pontoBase, otherPonto ) );
+           
 
         } else if( !p1MD && p2MD ){
 
@@ -242,8 +261,54 @@ function calcularPoligono( unidadePoligono, pontoBase, otherPonto ){
             poligonoNovo.push( p2 );
 
         }
+         // se os dois sao falsos n faz nada
     }
-    cores.push( gerarCorAleatoria() );
-    // se os dois sao falsos n faz nada
-    return poligonoNovo;
+
+    let celulanovo = {
+        poligono : poligonoNovo,
+        ponto : pontoBase,
+        cor : gerarCorAleatoria(),
+        vizinhos : []
+    }
+
+   
+    return celulanovo;
+}
+
+function calcularTriangulacao(){
+
+    celulas.forEach( c => {
+        
+        for( let i=0; i<celulas.length; i++ ){
+
+            if( c == celulas[i] ){
+                continue;
+            }
+            
+            if( arestasIguais( c.poligono, celulas[i].poligono ) ){
+                c.vizinhos.push( celulas[i].ponto );
+            }
+        }
+
+    } );
+    
+}
+
+function arestasIguais( poli1, poli2 ){
+    let a1 = [];
+    let a2 = [];
+    for( let i=0; i<poli1.length; i++ ){
+        for(let j=0; j<poli2.length; j++){
+            a1[0] = poli1[i];
+            a1[1] = poli1[ (i+1) % poli1.length ];
+            a2[0] = poli2[j];
+            a2[1] = poli2[ (j+1) % poli2.length ];
+
+            if( ( a1[0].x == a2[0].x && a1[0].y == a2[0].y && a1[1].x == a2[1].x && a1[1].y == a2[1].y ) || ( a1[0].y == a2[0].x && a1[0].x == a2[0].y && a1[1].y == a2[1].x && a1[1].x == a2[1].y )  ){
+            return true;
+            }  
+
+        }
+    }
+
 }
